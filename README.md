@@ -11,7 +11,7 @@ using your Mac's normal sound output.
 > It doesn't work on Windows, iPhone or iPad. **On Windows** you don't need it, because the same feature is
 > built in. See [Using Windows?](#using-windows) below.
 
-**[⬇️ Download the latest version](https://github.com/laiki961/audio-router/releases/latest)**, then follow
+**[⬇️ Download the latest version](https://github.com/laiki961/mac-audio-router/releases/latest)**, then follow
 the steps below. You don't need any technical knowledge, and setup takes about 5 minutes.
 
 **Contents:**
@@ -41,7 +41,7 @@ The version number is shown under the name. If it's lower than 14.4, update firs
 
 ## 2. Download and install
 
-1. Go to the **[Releases page](https://github.com/laiki961/audio-router/releases/latest)**.
+1. Go to the **[Releases page](https://github.com/laiki961/mac-audio-router/releases/latest)**.
 2. Under **Assets**, click **AudioRouter.zip** (this is the Mac app). It downloads to your **Downloads** folder.
 3. Open **Downloads** and double-click **AudioRouter.zip**. A file called **AudioRouter** appears.
 4. Drag **AudioRouter** into your **Applications** folder.
