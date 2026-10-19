@@ -4,13 +4,16 @@ A small macOS menu bar app that sends each app's audio to a different output dev
 For example, Spotify in Brave plays on an external speaker while course videos in another
 browser play on the built-in speakers.
 
+**Just want to use it?** Follow the [Getting Started guide](GUIDE.md). It shows you how to download
+the app and set it up, with no technical knowledge needed.
+
 Requires macOS 14.4 or later. It uses Core Audio process taps, so you don't need to install an audio driver.
 
-## Build
+## Build from source
 
 ```sh
 xcode-select --install   # once, if you don't have the Command Line Tools
-./build.sh
+./build.sh               # builds build/AudioRouter.app and build/AudioRouter.zip
 open build/AudioRouter.app
 ```
 
@@ -36,6 +39,13 @@ and allow Audio Router under Privacy & Security → Automation when macOS asks.
 
 Assignments are saved and come back the next time you launch the app. If the device an app
 is assigned to disconnects, that app falls back to the default output.
+
+## Publishing a release
+
+```sh
+./build.sh
+gh release create v1.x build/AudioRouter.zip --title "Audio Router 1.x" --notes "..."
+```
 
 ## How it works
 
