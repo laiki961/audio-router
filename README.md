@@ -7,6 +7,10 @@ in Chrome plays on your MacBook's built-in speakers.
 It works with **Safari, Google Chrome, Brave and the Spotify app**. Every other app keeps
 using your Mac's normal sound output.
 
+> 🍎 **Mac only.** Audio Router runs on Macs (Apple Silicon and Intel) with macOS 14.4 or later.
+> It doesn't work on Windows, iPhone or iPad. **On Windows** you don't need it, because the same feature is
+> built in. See [Using Windows?](#using-windows) below.
+
 **[⬇️ Download the latest version](https://github.com/laiki961/audio-router/releases/latest)**, then follow
 the steps below. You don't need any technical knowledge, and setup takes about 5 minutes.
 
@@ -21,13 +25,15 @@ the steps below. You don't need any technical knowledge, and setup takes about 5
 [8. Start automatically](#8-start-audio-router-automatically-optional) ·
 [Troubleshooting](#troubleshooting) ·
 [Uninstall](#uninstall) ·
+[Using Windows?](#using-windows) ·
 [For developers](#for-developers)
 
 ---
 
 ## 1. Check your Mac
 
-You need **macOS Sonoma 14.4 or later**.
+You need a **Mac** with **macOS Sonoma 14.4 or later**. Both Apple Silicon (M1, M2, M3…) and
+Intel Macs work, and the same download runs on both.
 
 To check: click the **Apple menu ()** in the top-left corner → **About This Mac**.
 The version number is shown under the name. If it's lower than 14.4, update first in
@@ -36,7 +42,7 @@ The version number is shown under the name. If it's lower than 14.4, update firs
 ## 2. Download and install
 
 1. Go to the **[Releases page](https://github.com/laiki961/audio-router/releases/latest)**.
-2. Under **Assets**, click **AudioRouter.zip**. It downloads to your **Downloads** folder.
+2. Under **Assets**, click **AudioRouter.zip** (this is the Mac app). It downloads to your **Downloads** folder.
 3. Open **Downloads** and double-click **AudioRouter.zip**. A file called **AudioRouter** appears.
 4. Drag **AudioRouter** into your **Applications** folder.
 
@@ -158,6 +164,25 @@ macOS doesn't let other apps send sound to AirPlay speakers, so these can't be u
 ## Uninstall
 
 Click the **🔊 speaker icon → Quit**, then drag **AudioRouter** from Applications to the Trash.
+
+---
+
+## Using Windows?
+
+Audio Router is Mac-only, but Windows 10 and 11 can already send each app to a different speaker:
+
+**Windows 11**
+1. Right-click the **speaker icon** in the taskbar → **Open volume mixer**
+   (or go to **Settings → System → Sound → Volume mixer**).
+2. Under **Apps**, click the arrow next to an app (for example Brave or Chrome).
+3. Next to **Output device**, choose the speaker for that app.
+
+**Windows 10**
+1. Right-click the **speaker icon** in the taskbar → **Open Sound settings**.
+2. Scroll down and click **App volume and device preferences**.
+3. Next to each app, choose its **Output** speaker.
+
+The app must be playing sound to appear in the list. Windows remembers your choice.
 
 ---
 
