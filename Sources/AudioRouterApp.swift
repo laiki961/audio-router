@@ -3,6 +3,7 @@ import SwiftUI
 
 @main
 struct AudioRouterApp: App {
+    @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     @StateObject private var model = RouterModel()
 
     var body: some Scene {
@@ -10,6 +11,24 @@ struct AudioRouterApp: App {
             RouterView().environmentObject(model)
         }
         .menuBarExtraStyle(.window)
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    /// Pause playback before quitting, while the routes still hold the audio; otherwise it would
+    /// jump to the default output once the taps go away.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        let failures = PlaybackPauser.pauseAll()
+        if !failures.isEmpty {
+            let alert = NSAlert()
+            alert.messageText = "Some audio couldn't be paused"
+            alert.informativeText = failures.joined(separator: "\n\n")
+            alert.addButton(withTitle: "Quit Anyway")
+            alert.addButton(withTitle: "Cancel")
+            NSApp.activate(ignoringOtherApps: true)
+            if alert.runModal() != .alertFirstButtonReturn { return .terminateCancel }
+        }
+        return .terminateNow
     }
 }
 

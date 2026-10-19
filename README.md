@@ -25,6 +25,11 @@ Apps left on "System default" follow the normal macOS output. Set both browsers 
 if you don't want them to move when the default output changes (connecting a Bluetooth
 speaker often makes it the default).
 
+Quitting Audio Router pauses playback in Safari, Chrome, Brave and Spotify, so audio doesn't
+jump to the default output. For the browsers, turn on **Allow JavaScript from Apple Events**
+once (Chrome/Brave: View → Developer; Safari: Develop menu, enabled in Settings → Advanced),
+and allow Audio Router under Privacy & Security → Automation when macOS asks.
+
 Assignments are saved and come back the next time you launch the app. If the device an app
 is assigned to disconnects, that app falls back to the default output.
 

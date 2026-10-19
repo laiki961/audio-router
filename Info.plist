@@ -20,6 +20,8 @@
 	<true/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Audio Router lists your paired Bluetooth speakers and headphones and connects the one you pick.</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Audio Router pauses playback in your browsers and Spotify when you quit it.</string>
 	<key>NSAudioCaptureUsageDescription</key>
 	<string>Audio Router captures each app's audio so it can play it on the output device you choose.</string>
 </dict>
