@@ -21,6 +21,10 @@ open build/AudioRouter.app
 3. The first time, macOS asks for **System Audio Recording** permission. Allow it
    (System Settings → Privacy & Security → Screen & System Audio Recording).
 
+Apps set to a specific output get a volume slider. It changes that device's own volume
+(like its volume buttons), so the keyboard volume keys keep controlling the default output.
+For devices without a volume control, the slider adjusts the app's level instead.
+
 Apps left on "System default" follow the normal macOS output. Set both browsers explicitly
 if you don't want them to move when the default output changes (connecting a Bluetooth
 speaker often makes it the default).

@@ -115,6 +115,19 @@ private struct AppRow: View {
                 .labelsHidden()
                 .frame(width: 170)
             }
+            if let output = assigned, output.isConnected, let volume = model.volume(for: app) {
+                HStack(spacing: 6) {
+                    Image(systemName: "speaker.fill")
+                    Slider(value: Binding(get: { Double(volume) },
+                                          set: { model.setVolume(Float($0), for: app) }),
+                           in: 0...1)
+                    Image(systemName: "speaker.wave.3.fill")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.leading, 28)
+                .help("\(output.name) volume")
+            }
             if let output = assigned, !output.isConnected {
                 HStack(spacing: 6) {
                     if model.connecting.contains(output.id) {

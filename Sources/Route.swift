@@ -15,10 +15,19 @@ final class Route {
     private var aggregateID = AudioObjectID.unknown
     private var ioProcID: AudioDeviceIOProcID?
     private let queue = DispatchQueue(label: "AudioRouter.io", qos: .userInteractive)
+    /// Read by the IO callback; a single aligned Float, so plain reads/writes are safe enough here.
+    private let gain = UnsafeMutablePointer<Float>.allocate(capacity: 1)
+
+    /// Software volume applied to the app's audio (used when the device has no volume control).
+    var softwareGain: Float {
+        get { gain.pointee }
+        set { gain.pointee = newValue }
+    }
 
     init(appName: String, processObjects: [AudioObjectID], deviceUID: String) throws {
         self.deviceUID = deviceUID
         self.processObjects = processObjects
+        gain.initialize(to: 1)
         do {
             try start(appName: appName)
         } catch {
@@ -27,7 +36,10 @@ final class Route {
         }
     }
 
-    deinit { stop() }
+    deinit {
+        stop()
+        gain.deallocate()
+    }
 
     private func start(appName: String) throws {
         let tap = CATapDescription(stereoMixdownOfProcesses: processObjects)
@@ -39,6 +51,7 @@ final class Route {
 
         let format = try tapID.value(kAudioTapPropertyFormat, default: AudioStreamBasicDescription())
         let tapChannels = Int(format.mChannelsPerFrame)
+        let gain = self.gain
 
         let description: [String: Any] = [
             kAudioAggregateDeviceNameKey: "Audio Router – \(appName)",
@@ -57,7 +70,7 @@ final class Route {
                   "Create aggregate device")
 
         try check(AudioDeviceCreateIOProcIDWithBlock(&ioProcID, aggregateID, queue) { _, input, _, output, _ in
-            Route.render(input: input, output: output, tapChannels: tapChannels)
+            Route.render(input: input, output: output, tapChannels: tapChannels, gain: gain.pointee)
         }, "Create IO callback")
         try check(AudioDeviceStart(aggregateID, ioProcID), "Start output device")
     }
@@ -103,7 +116,8 @@ final class Route {
 
     private static func render(input: UnsafePointer<AudioBufferList>,
                                output: UnsafeMutablePointer<AudioBufferList>,
-                               tapChannels: Int) {
+                               tapChannels: Int,
+                               gain: Float) {
         let inputs = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: input))
         let outputs = UnsafeMutableAudioBufferListPointer(output)
 
@@ -128,7 +142,7 @@ final class Route {
            let l = channel(inputs, first: firstTap, 0),
            let r = channel(inputs, first: firstTap, 1) {
             for f in 0..<min(dst.frames, l.frames, r.frames) {
-                dst.samples[f * dst.stride] = 0.5 * (l.samples[f * l.stride] + r.samples[f * r.stride])
+                dst.samples[f * dst.stride] = 0.5 * gain * (l.samples[f * l.stride] + r.samples[f * r.stride])
             }
             return
         }
@@ -140,7 +154,7 @@ final class Route {
                   let dst = channel(outputs, first: 0, d),
                   let src = channel(inputs, first: firstTap, s) else { continue }
             for f in 0..<min(dst.frames, src.frames) {
-                dst.samples[f * dst.stride] = src.samples[f * src.stride]
+                dst.samples[f * dst.stride] = gain * src.samples[f * src.stride]
             }
         }
     }

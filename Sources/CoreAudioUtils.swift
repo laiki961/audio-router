@@ -58,3 +58,43 @@ extension AudioObjectID {
         return ref.takeRetainedValue() as String
     }
 }
+
+/// Hardware output volume of a device, as set by the Sound menu or the device's own buttons.
+enum DeviceVolume {
+    private static func address(_ element: AudioObjectPropertyElement) -> AudioObjectPropertyAddress {
+        AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyVolumeScalar,
+                                   mScope: kAudioDevicePropertyScopeOutput, mElement: element)
+    }
+
+    /// Elements with a settable volume: the main element, or else the left/right channels.
+    private static func elements(_ device: AudioObjectID) -> [AudioObjectPropertyElement] {
+        func settable(_ element: AudioObjectPropertyElement) -> Bool {
+            var addr = address(element)
+            var isSettable: DarwinBoolean = false
+            return AudioObjectHasProperty(device, &addr)
+                && AudioObjectIsPropertySettable(device, &addr, &isSettable) == noErr
+                && isSettable.boolValue
+        }
+        if settable(kAudioObjectPropertyElementMain) { return [kAudioObjectPropertyElementMain] }
+        return [1, 2].filter(settable)
+    }
+
+    /// The device's volume (0...1), or nil if it can't be controlled from the Mac.
+    static func get(_ device: AudioObjectID) -> Float? {
+        let values = elements(device).compactMap { element -> Float? in
+            var addr = address(element)
+            var value: Float32 = 0
+            var size = UInt32(MemoryLayout<Float32>.size)
+            return AudioObjectGetPropertyData(device, &addr, 0, nil, &size, &value) == noErr ? value : nil
+        }
+        return values.max()
+    }
+
+    static func set(_ device: AudioObjectID, _ volume: Float) {
+        for element in elements(device) {
+            var addr = address(element)
+            var value = Float32(volume)
+            AudioObjectSetPropertyData(device, &addr, 0, nil, UInt32(MemoryLayout<Float32>.size), &value)
+        }
+    }
+}
