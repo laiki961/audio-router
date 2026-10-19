@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Pause playback before quitting, while the routes still hold the audio; otherwise it would
     /// jump to the default output once the taps go away.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        log.notice("Quit requested; pausing playback")
         let failures = PlaybackPauser.pauseAll()
         if !failures.isEmpty {
             let alert = NSAlert()
@@ -25,7 +26,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             alert.informativeText = failures.joined(separator: "\n\n")
             alert.addButton(withTitle: "Quit Anyway")
             alert.addButton(withTitle: "Cancel")
-            NSApp.activate(ignoringOtherApps: true)
+            // Audio Router has no Dock icon, so bring the alert in front of other apps' windows.
+            NSApp.activate()
+            alert.window.level = .floating
             if alert.runModal() != .alertFirstButtonReturn { return .terminateCancel }
         }
         return .terminateNow
@@ -52,6 +55,11 @@ struct RouterView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
+            if !model.pauseProblems.isEmpty {
+                Divider()
+                PauseWarning()
+            }
+
             Divider()
             HStack {
                 Button("Refresh") { model.refresh() }
@@ -61,6 +69,28 @@ struct RouterView: View {
         }
         .padding(12)
         .frame(width: 360)
+        .onAppear { model.checkPauseReadiness() }
+    }
+}
+
+/// Explains which browsers will keep playing when Audio Router quits, and how to fix it.
+private struct PauseWarning: View {
+    @EnvironmentObject private var model: RouterModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label("These won't pause when you quit", systemImage: "exclamationmark.triangle.fill")
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(.orange)
+            ForEach(model.pauseProblems.sorted(by: { $0.key < $1.key }), id: \.key) { bundleID, hint in
+                let name = model.apps.first { $0.id == bundleID }?.name ?? bundleID
+                Text("**\(name):** \(hint)")
+                    .font(.caption)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Button("Check Again") { model.checkPauseReadiness() }
+                .controlSize(.small)
+        }
     }
 }
 

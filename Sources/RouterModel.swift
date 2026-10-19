@@ -14,6 +14,8 @@ final class RouterModel: ObservableObject {
     @Published private(set) var deviceVolumes: [String: Float] = [:]
     /// App id -> software volume, used when the app's device has no volume control.
     @Published private(set) var softwareGains: [String: Float] = [:]
+    /// Bundle ID -> how to fix it, for browsers that would block pausing on quit.
+    @Published private(set) var pauseProblems: [String: String] = [:]
 
     private var deviceIDs: [String: AudioObjectID] = [:]
 
@@ -25,6 +27,7 @@ final class RouterModel: ObservableObject {
     init() {
         assignments = UserDefaults.standard.dictionary(forKey: defaultsKey) as? [String: String] ?? [:]
         refresh()
+        checkPauseReadiness()
         // Apps start/stop audio helper processes and devices come and go, so re-scan regularly.
         timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refresh() }
@@ -41,6 +44,10 @@ final class RouterModel: ObservableObject {
         if newApps != apps { apps = newApps }
         sync()
         refreshVolumes()
+    }
+
+    func checkPauseReadiness() {
+        Task { pauseProblems = await PlaybackPauser.checkReadiness() }
     }
 
     /// The volume shown for an app routed to a specific device, or nil if it uses the system default.

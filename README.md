@@ -121,7 +121,11 @@ For this to work in browsers, turn on one setting in each browser you use (once)
 - **Safari:** click **Safari → Settings → Advanced** and tick **Show features for web developers**.
   Then, in the menu bar, click **Develop → Allow JavaScript from Apple Events**.
 
-If something couldn't be paused, Audio Router tells you why and lets you **Quit Anyway** or **Cancel**.
+Not sure if it's set up? Open the **🔊 speaker icon**. If a browser still needs this setting, an orange
+**"These won't pause when you quit"** warning lists it with the exact steps. After you change the
+setting, click **Check Again** and the warning disappears.
+
+If something can't be paused when you quit, Audio Router tells you why and lets you **Quit Anyway** or **Cancel**.
 
 ## 8. Start Audio Router automatically (optional)
 
