@@ -4,6 +4,8 @@
 <dict>
 	<key>CFBundleIdentifier</key>
 	<string>com.nikkiip.AudioRouter</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleName</key>
 	<string>Audio Router</string>
 	<key>CFBundleExecutable</key>
