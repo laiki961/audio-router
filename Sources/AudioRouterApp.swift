@@ -21,13 +21,17 @@ struct RouterView: View {
             Text("Audio Router").font(.headline)
 
             if model.apps.isEmpty {
-                Text("No apps are using audio yet. Start playing something and it will show up here.")
+                Text("Safari, Chrome, Brave or Spotify isn't installed.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
             ForEach(model.apps) { app in
                 AppRow(app: app)
             }
+
+            Text("All other apps use the system default output.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
             Divider()
             HStack {
@@ -50,10 +54,14 @@ private struct AppRow: View {
         return NSImage(systemSymbolName: "app", accessibilityDescription: nil) ?? NSImage()
     }
 
+    private var assigned: OutputOption? {
+        model.assignments[app.id].flatMap(model.option(for:))
+    }
+
     private var selection: Binding<String> {
         Binding(
-            get: { model.assignments[app.id] ?? "" },
-            set: { model.setDevice($0.isEmpty ? nil : $0, for: app) }
+            get: { assigned?.id ?? model.assignments[app.id] ?? "" },
+            set: { model.setOutput($0.isEmpty ? nil : $0, for: app) }
         )
     }
 
@@ -68,15 +76,38 @@ private struct AppRow: View {
                 Spacer()
                 Picker("", selection: selection) {
                     Text("System default").tag("")
-                    ForEach(model.devices) { device in
-                        Text(device.name).tag(device.id)
+                    Divider()
+                    ForEach(model.outputs.filter(\.isConnected)) { output in
+                        Text(output.name).tag(output.id)
                     }
-                    if let uid = model.assignments[app.id], model.deviceName(for: uid) == nil {
-                        Text("Disconnected device").tag(uid)
+                    let disconnected = model.outputs.filter { !$0.isConnected }
+                    if !disconnected.isEmpty {
+                        Divider()
+                        Section("Bluetooth – connects when picked") {
+                            ForEach(disconnected) { output in
+                                Text(output.name).tag(output.id)
+                            }
+                        }
+                    }
+                    if let id = model.assignments[app.id], assigned == nil {
+                        Text("Unavailable device").tag(id)
                     }
                 }
                 .labelsHidden()
-                .frame(width: 160)
+                .frame(width: 170)
+            }
+            if let output = assigned, !output.isConnected {
+                HStack(spacing: 6) {
+                    if model.connecting.contains(output.id) {
+                        ProgressView().controlSize(.small)
+                        Text("Connecting to \(output.name)…")
+                    } else {
+                        Text("\(output.name) isn't connected.")
+                        Button("Connect") { model.connect(output) }.controlSize(.small)
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             }
             if let error = model.errors[app.id] {
                 Text(error).font(.caption).foregroundStyle(.red)

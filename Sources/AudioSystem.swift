@@ -5,10 +5,18 @@ import Darwin
 /// Prefix used for the UIDs of the aggregate devices this app creates, so we can hide them.
 let routerDevicePrefix = "AudioRouter-"
 
+/// The only apps shown in the router, in display order. Everything else uses the system default output.
+let routableBundleIDs = ["com.apple.Safari", "com.google.Chrome", "com.brave.Browser", "com.spotify.client"]
+
+/// Returns the app macOS holds responsible for a process (e.g. Safari for its WebKit GPU process).
+@_silgen_name("responsibility_get_pid_responsible_for_pid")
+private func responsibility_get_pid_responsible_for_pid(_ pid: pid_t) -> pid_t
+
 struct OutputDevice: Identifiable, Hashable {
     let id: String          // device UID (stable across reboots)
     let objectID: AudioObjectID
     let name: String
+    let isBluetooth: Bool
 }
 
 /// An application that currently has audio sessions. Browsers and Electron apps play
@@ -30,7 +38,21 @@ enum AudioSystem {
                   let uid = try? id.string(kAudioDevicePropertyDeviceUID),
                   !uid.hasPrefix(routerDevicePrefix) else { return nil }
             let name = (try? id.string(kAudioObjectPropertyName)) ?? uid
-            return OutputDevice(id: uid, objectID: id, name: name)
+            let transport = (try? id.value(kAudioDevicePropertyTransportType, default: UInt32(0))) ?? 0
+            let isBluetooth = transport == kAudioDeviceTransportTypeBluetooth
+                || transport == kAudioDeviceTransportTypeBluetoothLE
+            return OutputDevice(id: uid, objectID: id, name: name, isBluetooth: isBluetooth)
+        }
+    }
+
+    /// The routable apps that are installed, with their current audio processes (if any).
+    static func routableApps(excludingPID ownPID: pid_t) -> [AudioApp] {
+        let active = Dictionary(audioApps(excludingPID: ownPID).map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        return routableBundleIDs.compactMap { bundleID in
+            if let app = active[bundleID] { return app }
+            guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else { return nil }
+            return AudioApp(id: bundleID, name: url.deletingPathExtension().lastPathComponent,
+                            bundleURL: url, processObjects: [], isPlaying: false)
         }
     }
 
@@ -62,10 +84,11 @@ enum AudioSystem {
         return String(cString: buffer)
     }
 
-    /// Resolves the outermost .app bundle that contains the process's executable,
+    /// Resolves the outermost .app bundle of the process macOS holds responsible for `pid`,
     /// e.g. ".../Brave Browser.app/.../Brave Browser Helper.app/..." -> "Brave Browser".
     private static func owningApp(pid: pid_t, bundleID: String?) -> (key: String, name: String, url: URL?) {
-        let path = executablePath(pid: pid)
+        let responsible = responsibility_get_pid_responsible_for_pid(pid)
+        let path = (responsible > 0 ? executablePath(pid: responsible) : nil) ?? executablePath(pid: pid)
         if let path, let range = path.range(of: ".app/") {
             let appPath = String(path[..<range.lowerBound]) + ".app"
             let url = URL(fileURLWithPath: appPath)

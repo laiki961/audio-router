@@ -18,6 +18,8 @@
 	<string>14.4</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Audio Router lists your paired Bluetooth speakers and headphones and connects the one you pick.</string>
 	<key>NSAudioCaptureUsageDescription</key>
 	<string>Audio Router captures each app's audio so it can play it on the output device you choose.</string>
 </dict>

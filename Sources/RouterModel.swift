@@ -4,13 +4,15 @@ import SwiftUI
 @MainActor
 final class RouterModel: ObservableObject {
     @Published private(set) var apps: [AudioApp] = []
-    @Published private(set) var devices: [OutputDevice] = []
+    @Published private(set) var outputs: [OutputOption] = []
     @Published private(set) var errors: [String: String] = [:]
-    /// App id -> output device UID. Apps without an entry use the system default output.
+    @Published private(set) var connecting: Set<String> = []   // Bluetooth option ids being connected
+    /// App id -> output option id. Apps without an entry use the system default output.
     @Published private(set) var assignments: [String: String]
 
     private var routes: [String: Route] = [:]
     private var timer: Timer?
+    private let bluetooth = BluetoothConnector()
     private let defaultsKey = "assignments"
 
     init() {
@@ -23,32 +25,54 @@ final class RouterModel: ObservableObject {
     }
 
     func refresh() {
-        let newDevices = AudioSystem.outputDevices()
-        if newDevices != devices { devices = newDevices }
-        let newApps = AudioSystem.audioApps(excludingPID: getpid())
+        let newOutputs = BluetoothAudio.outputOptions(devices: AudioSystem.outputDevices(),
+                                                      bluetooth: BluetoothAudio.pairedAudioDevices())
+        if newOutputs != outputs { outputs = newOutputs }
+        let newApps = AudioSystem.routableApps(excludingPID: getpid())
         if newApps != apps { apps = newApps }
         sync()
     }
 
-    func setDevice(_ deviceUID: String?, for app: AudioApp) {
-        assignments[app.id] = deviceUID
+    func setOutput(_ optionID: String?, for app: AudioApp) {
+        assignments[app.id] = optionID
         UserDefaults.standard.set(assignments, forKey: defaultsKey)
+        if let option = optionID.flatMap(option(for:)), !option.isConnected {
+            connect(option)
+        }
         sync()
     }
 
-    func deviceName(for uid: String) -> String? {
-        devices.first { $0.id == uid }?.name
+    func option(for id: String) -> OutputOption? {
+        outputs.first { $0.id == id || $0.deviceUID == id }
+    }
+
+    func connect(_ option: OutputOption) {
+        guard let address = option.bluetoothAddress, !connecting.contains(option.id) else { return }
+        connecting.insert(option.id)
+        bluetooth.connect(address: address) { [weak self] success in
+            Task { @MainActor in
+                guard let self else { return }
+                self.connecting.remove(option.id)
+                if !success {
+                    for (app, assigned) in self.assignments where assigned == option.id {
+                        self.errors[app] = "Couldn't connect to \(option.name). Is it on and in range?"
+                    }
+                }
+                self.refresh()
+            }
+        }
     }
 
     /// Creates, rebuilds or removes routes so they match the current assignments.
     private func sync() {
-        let available = Set(devices.map(\.id))
         let appsByID = Dictionary(uniqueKeysWithValues: apps.map { ($0.id, $0) })
+        let deviceUID: (String) -> String? = { [self] appID in
+            assignments[appID].flatMap(option(for:))?.deviceUID
+        }
 
         for (id, route) in routes {
             guard let app = appsByID[id],
-                  let uid = assignments[id], available.contains(uid),
-                  route.deviceUID == uid,
+                  route.deviceUID == deviceUID(id),
                   route.processObjects == app.processObjects else {
                 routes[id] = nil   // tears down the tap; the app falls back to the default output
                 continue
@@ -56,10 +80,8 @@ final class RouterModel: ObservableObject {
         }
 
         for app in apps where routes[app.id] == nil {
-            guard let uid = assignments[app.id], available.contains(uid) else {
-                errors[app.id] = nil
-                continue
-            }
+            // An app with no audio processes yet gets routed as soon as it starts playing.
+            guard !app.processObjects.isEmpty, let uid = deviceUID(app.id) else { continue }
             do {
                 routes[app.id] = try Route(appName: app.name, processObjects: app.processObjects, deviceUID: uid)
                 errors[app.id] = nil
