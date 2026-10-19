@@ -84,10 +84,19 @@ enum AudioSystem {
         return String(cString: buffer)
     }
 
-    /// Resolves the outermost .app bundle of the process macOS holds responsible for `pid`,
-    /// e.g. ".../Brave Browser.app/.../Brave Browser Helper.app/..." -> "Brave Browser".
+    /// Resolves the app macOS holds responsible for `pid`, falling back to the outermost .app
+    /// bundle in its path, e.g. ".../Brave Browser.app/.../Brave Browser Helper.app/..." -> "Brave Browser".
     private static func owningApp(pid: pid_t, bundleID: String?) -> (key: String, name: String, url: URL?) {
         let responsible = responsibility_get_pid_responsible_for_pid(pid)
+        // Prefer the installed copy's identity: Chrome can run from a temporary "code_sign_clone"
+        // copy after updating, whose path doesn't end in ".app".
+        if responsible > 0,
+           let running = NSRunningApplication(processIdentifier: responsible),
+           let key = running.bundleIdentifier {
+            let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: key) ?? running.bundleURL
+            let name = url.map { $0.deletingPathExtension().lastPathComponent } ?? running.localizedName ?? key
+            return (key, name, url)
+        }
         let path = (responsible > 0 ? executablePath(pid: responsible) : nil) ?? executablePath(pid: pid)
         if let path, let range = path.range(of: ".app/") {
             let appPath = String(path[..<range.lowerBound]) + ".app"
