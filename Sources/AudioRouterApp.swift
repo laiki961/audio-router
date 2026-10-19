@@ -6,6 +6,35 @@ struct AudioRouterApp: App {
     @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
     @StateObject private var model = RouterModel()
 
+    init() {
+        // Runs before the model is created, so a second copy never touches any audio.
+        Self.exitIfAlreadyRunning()
+    }
+
+    /// Only one Audio Router may run at a time (two copies would both try to route the same apps).
+    /// The copy launched later explains where the running one is and quits.
+    private static func exitIfAlreadyRunning() {
+        let me = NSRunningApplication.current
+        guard let bundleID = Bundle.main.bundleIdentifier,
+              let other = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first(where: {
+                  // Tie-break on PID, so two copies launched at the same moment don't both quit.
+                  $0 != me && ($0.launchDate ?? .distantPast, $0.processIdentifier)
+                      < (me.launchDate ?? .distantFuture, me.processIdentifier)
+              }) else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "Audio Router is already running"
+        alert.informativeText = "Click the speaker icon in the menu bar to use it."
+        if let path = other.bundleURL?.path, path != Bundle.main.bundlePath {
+            alert.informativeText += "\n\nThe running copy is at:\n\(path)"
+        }
+        alert.addButton(withTitle: "OK")
+        NSApplication.shared.activate()
+        alert.window.level = .floating
+        alert.runModal()
+        exit(0)
+    }
+
     var body: some Scene {
         MenuBarExtra("Audio Router", systemImage: "hifispeaker.2") {
             RouterView().environmentObject(model)
